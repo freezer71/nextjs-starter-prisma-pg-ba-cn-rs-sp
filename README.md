@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Starter Next.js 16
 
-## Getting Started
+Next.js 16 · Prisma 7 + Postgres · Better Auth · shadcn/ui · Resend + React Email · Stripe.
 
-First, run the development server:
+## Démarrage
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env            # puis renseigner BETTER_AUTH_SECRET (openssl rand -base64 32)
+npm install                     # génère aussi le client Prisma
+npm run db:up                   # Postgres local (Docker)
+npm run db:migrate              # applique les migrations
+npm run dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sans `RESEND_API_KEY`, les emails (vérification, reset, lien magique) sont affichés dans la console du serveur avec leur lien : tous les parcours sont testables sans compte Resend.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stripe
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Renseigner `STRIPE_SECRET_KEY` (clé restreinte `rk_` recommandée) et `STRIPE_PRICE_PRO_MONTHLY` (Price d'un Product en mode abonnement).
+2. En développement : `npm run stripe:listen` puis copier le secret `whsec_...` affiché dans `STRIPE_WEBHOOK_SECRET`.
+3. En production : créer un endpoint webhook vers `/api/stripe/webhook` abonné aux événements listés dans `HANDLED_STRIPE_EVENTS` (`lib/stripe/webhook-handlers.ts`).
+4. `npm run stripe:smoke` envoie des événements signés au serveur local pour vérifier la route sans compte Stripe.
 
-## Learn More
+Pensez à Stripe Tax si vous facturez des clients UE/US (`automatic_tax` nécessite une immatriculation active).
 
-To learn more about Next.js, take a look at the following resources:
+## Personnaliser
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Thème : `app/theme.css` (couleurs oklch, `--radius`). Nom, URL, contact : `config/site.ts`.
+- Politique de mots de passe, routes d'auth : `config/auth.ts`. Plans : `config/billing.ts`.
+- Nouvelle variable d'environnement : `lib/env.ts` + `.env.example`.
+- Emails : `emails/` (`npm run email:dev` pour la prévisualisation).
+- Pages légales (`/legal`, `/privacy`, `/terms`) : remplir `config/legal.ts` (éditeur, hébergeur, contact RGPD, sous-traitants) et faire valider les textes par un conseil juridique.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+`dev`, `build`, `start`, `lint`, `typecheck`, `test`, `db:*`, `auth:generate`, `email:dev`, `stripe:listen`, `stripe:smoke`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Voir `CLAUDE.md` pour l'architecture détaillée et les conventions.

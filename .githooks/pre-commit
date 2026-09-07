@@ -1,0 +1,21 @@
+#!/bin/sh
+# Bloque le commit si des secrets Stripe / Resend ou un fichier .env sont indexés.
+# Activé par `npm run prepare` (git config core.hooksPath .githooks).
+
+staged_env=$(git diff --cached --name-only | grep -E '(^|/)\.env(\..*)?$' | grep -v '\.env\.example$')
+if [ -n "$staged_env" ]; then
+  echo "✗ Fichier d'environnement indexé (contient des secrets) :"
+  echo "$staged_env"
+  exit 1
+fi
+
+pattern='(^|[^A-Za-z0-9_])((sk|rk)_(live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}|re_[A-Za-z0-9]{20,})'
+matches=$(git diff --cached -U0 | grep -E '^\+' | grep -vE '^\+\+\+' | grep -E "$pattern")
+if [ -n "$matches" ]; then
+  echo "✗ Secret potentiel détecté dans les modifications indexées :"
+  echo "$matches" | cut -c1-120
+  echo "Retirez-le du code et utilisez une variable d'environnement."
+  exit 1
+fi
+
+exit 0
