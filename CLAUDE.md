@@ -12,6 +12,7 @@ Starter réutilisable : Next.js 16 (App Router, Turbopack), Prisma 7 + Postgres,
 | `npm run db:migrate` / `db:generate` / `db:studio` | Prisma (config dans `prisma.config.ts`) |
 | `npm run dev` | Serveur de dev |
 | `npm run typecheck` / `lint` / `test` / `build` | Vérifications (vitest pour la logique pure) |
+| `npm run vercel-build` | Build Vercel : `prisma generate` → `next build` → `prisma migrate deploy` (prod ; preview si `MIGRATE_ON_PREVIEW=1`) |
 | `npm run email:dev` | Prévisualisation des emails (`emails/`) |
 | `npm run stripe:listen` / `stripe:smoke` | Webhook Stripe : CLI Stripe, ou test signé sans compte |
 | `npm run auth:generate` | Régénère le schéma Prisma de Better Auth (après ajout d'un plugin ; retirer temporairement `import "server-only"` des modules chargés) |

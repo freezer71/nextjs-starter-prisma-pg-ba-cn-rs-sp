@@ -10,6 +10,8 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+    // Utilisée uniquement par la CLI Prisma (prisma.config.ts) : connexion sans pooler.
+    DIRECT_URL: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
     BETTER_AUTH_SECRET: z
       .string()
       .min(32, "BETTER_AUTH_SECRET doit faire au moins 32 caractères (openssl rand -base64 32)"),
@@ -26,6 +28,7 @@ export const env = createEnv({
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     BETTER_AUTH_TRUSTED_ORIGINS: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
     RESEND_API_KEY: process.env.RESEND_API_KEY,

@@ -23,6 +23,16 @@ Sans `RESEND_API_KEY`, les emails (vérification, reset, lien magique) sont affi
 
 Pensez à Stripe Tax si vous facturez des clients UE/US (`automatic_tax` nécessite une immatriculation active).
 
+## Déploiement Vercel
+
+Le script `vercel-build` (détecté automatiquement par Vercel, ne pas définir de « Build Command » dans le dashboard) exécute `prisma generate`, `next build`, puis `prisma migrate deploy` :
+
+- **Production** : migrations appliquées à chaque déploiement ; un échec fait échouer le build (le déploiement n'est pas promu).
+- **Preview** : migrations ignorées, sauf si `MIGRATE_ON_PREVIEW=1` (base propre à chaque preview, ex. branches Neon). Ne jamais pointer une preview vers la base de production avec cette option.
+- **Pooler** : si `DATABASE_URL` passe par un pooler (Supabase `:6543`, Neon `-pooler`), renseigner `DIRECT_URL` (connexion directe) pour les migrations. `DATABASE_URL_UNPOOLED` (intégration Neon) est pris en compte automatiquement.
+
+Les migrations s'appliquent avant la mise en ligne de la nouvelle version, pendant que l'ancienne tourne encore : les écrire rétrocompatibles (ajouter d'abord, supprimer dans un déploiement ultérieur). Variables à définir sur Vercel : celles de `.env.example`, avec `NEXT_PUBLIC_APP_URL` sur l'URL de production.
+
 ## Personnaliser
 
 - Thème : `app/theme.css` (couleurs oklch, `--radius`). Nom, URL, contact : `config/site.ts`.
@@ -33,6 +43,6 @@ Pensez à Stripe Tax si vous facturez des clients UE/US (`automatic_tax` nécess
 
 ## Scripts
 
-`dev`, `build`, `start`, `lint`, `typecheck`, `test`, `db:*`, `auth:generate`, `email:dev`, `stripe:listen`, `stripe:smoke`.
+`dev`, `build`, `vercel-build`, `start`, `lint`, `typecheck`, `test`, `db:*`, `auth:generate`, `email:dev`, `stripe:listen`, `stripe:smoke`.
 
 Voir `CLAUDE.md` pour l'architecture détaillée et les conventions.

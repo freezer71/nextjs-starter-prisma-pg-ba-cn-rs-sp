@@ -11,6 +11,13 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+    // La CLI (migrate, studio…) exige une connexion directe : un pooler en mode transaction
+    // (PgBouncer, Supavisor, Neon « -pooler ») casse les verrous et transactions des migrations.
+    // DATABASE_URL_UNPOOLED est fournie automatiquement par l'intégration Neon de Vercel.
+    url:
+      process.env.DIRECT_URL ??
+      process.env.DATABASE_URL_UNPOOLED ??
+      process.env.DATABASE_URL ??
+      DEFAULT_DATABASE_URL,
   },
 });
