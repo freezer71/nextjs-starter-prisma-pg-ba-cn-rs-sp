@@ -21,10 +21,13 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: z.string().regex(/^[sr]k_(test|live)_/).optional(),
     STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_").optional(),
     STRIPE_PRICE_PRO_MONTHLY: z.string().startsWith("price_").optional(),
+    // Cloudflare Turnstile : à renseigner avec NEXT_PUBLIC_TURNSTILE_SITE_KEY (les deux ou aucune).
+    TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.url(),
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -36,8 +39,10 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   },
   // Une chaîne vide dans .env est traitée comme absente (utile pour les variables optionnelles).
   emptyStringAsUndefined: true,

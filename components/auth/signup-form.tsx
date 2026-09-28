@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { FormMessage } from "@/components/auth/form-message";
 import { SubmitButton } from "@/components/auth/submit-button";
-import { translateAuthError, useAuthForm } from "@/components/auth/use-auth-form";
+import { TurnstileWidget, useTurnstile } from "@/components/auth/turnstile";
+import { CAPTCHA_PENDING_MESSAGE, translateAuthError, useAuthForm } from "@/components/auth/use-auth-form";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authConfig } from "@/config/auth";
@@ -16,15 +17,22 @@ import { signupSchema } from "@/lib/validations/auth";
 export function SignupForm() {
   const router = useRouter();
   const { errors, formError, setFormError, pending, handleSubmit } = useAuthForm(signupSchema);
+  const turnstile = useTurnstile();
 
   const onSubmit = handleSubmit(async ({ name, email, password }) => {
+    if (!turnstile.ready) {
+      setFormError(CAPTCHA_PENDING_MESSAGE);
+      return;
+    }
     const { error } = await authClient.signUp.email({
       name,
       email,
       password,
       // Page atteinte après le clic sur le lien de confirmation.
       callbackURL: authConfig.routes.verifyEmail,
+      fetchOptions: turnstile.fetchOptions,
     });
+    turnstile.reset();
     if (error) {
       if (error.status === 429) {
         setFormError("Trop de tentatives. Patientez une minute avant de réessayer.");
@@ -65,6 +73,7 @@ export function SignupForm() {
           <FieldError>{errors.confirmPassword}</FieldError>
         </Field>
       </FieldGroup>
+      <TurnstileWidget {...turnstile.widgetProps} />
       <SubmitButton pending={pending}>Créer mon compte</SubmitButton>
       <p className="text-center text-xs text-muted-foreground">
         En créant un compte, vous acceptez nos{" "}

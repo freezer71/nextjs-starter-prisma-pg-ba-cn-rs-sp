@@ -5,13 +5,15 @@
  * (ou chargés par eux, via 'strict-dynamic') sont exécutés. Next.js applique automatiquement
  * le nonce à ses propres scripts lorsqu'il le trouve dans l'en-tête CSP de la requête.
  *
- * Domaines Stripe autorisés pour Stripe.js / Checkout embarqué. Ajouter ici les domaines
+ * Domaines Stripe autorisés pour Stripe.js / Checkout embarqué, et Cloudflare pour Turnstile. Ajouter ici les domaines
  * de vos services tiers (analytics, CDN d'images, ...).
  */
 
 const STRIPE_SCRIPT_HOSTS = ["https://js.stripe.com", "https://checkout.stripe.com"];
 const STRIPE_FRAME_HOSTS = ["https://js.stripe.com", "https://checkout.stripe.com", "https://hooks.stripe.com"];
 const STRIPE_CONNECT_HOSTS = ["https://api.stripe.com", "https://checkout.stripe.com"];
+// Cloudflare Turnstile : script (chargé par components/auth/turnstile.tsx) et iframe du challenge.
+const TURNSTILE_HOST = "https://challenges.cloudflare.com";
 
 export type CspOptions = {
   nonce: string;
@@ -22,14 +24,14 @@ export type CspOptions = {
 export function buildCsp({ nonce, isDev = false }: CspOptions): string {
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
-    "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...STRIPE_SCRIPT_HOSTS, ...(isDev ? ["'unsafe-eval'"] : [])],
+    "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...STRIPE_SCRIPT_HOSTS, TURNSTILE_HOST, ...(isDev ? ["'unsafe-eval'"] : [])],
     // Les composants UI positionnent leurs éléments via des attributs style inline :
     // 'unsafe-inline' est nécessaire ici (risque limité : les styles ne peuvent pas exécuter de code).
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "blob:", "data:", "https://*.stripe.com"],
     "font-src": ["'self'", "data:"],
     "connect-src": ["'self'", ...STRIPE_CONNECT_HOSTS, ...(isDev ? ["ws:", "wss:"] : [])],
-    "frame-src": [...STRIPE_FRAME_HOSTS],
+    "frame-src": [...STRIPE_FRAME_HOSTS, TURNSTILE_HOST],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],

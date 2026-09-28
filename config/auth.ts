@@ -34,6 +34,17 @@ export const authConfig = {
     /** Destination après déconnexion. */
     afterLogout: "/login",
   },
+  /**
+   * Endpoints Better Auth (relatifs à /api/auth) protégés par Cloudflare Turnstile quand il est configuré.
+   * Chaque formulaire qui appelle l'un d'eux doit afficher le widget (useTurnstile).
+   */
+  captchaEndpoints: [
+    "/sign-up/email",
+    "/sign-in/email",
+    "/sign-in/magic-link",
+    "/request-password-reset",
+    "/send-verification-email",
+  ],
   /** Préfixes de routes réservées aux utilisateurs connectés (utilisés par proxy.ts). */
   protectedPrefixes: ["/dashboard"],
 } as const;

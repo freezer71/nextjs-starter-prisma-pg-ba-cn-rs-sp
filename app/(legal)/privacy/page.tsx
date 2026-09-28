@@ -91,7 +91,7 @@ export default function PrivacyPage() {
               <td className="py-2">{retention.billing}</td>
             </tr>
             <tr className="border-b">
-              <td className="py-2 pr-4">Sécurité du Service, prévention de la fraude et des abus (limitation de débit)</td>
+              <td className="py-2 pr-4">Sécurité du Service, prévention de la fraude et des abus (limitation de débit, vérification anti-robot)</td>
               <td className="py-2 pr-4">Intérêt légitime (art. 6.1.f)</td>
               <td className="py-2">{retention.securityLogs}</td>
             </tr>

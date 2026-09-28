@@ -14,6 +14,16 @@ npm run dev                     # http://localhost:3000
 
 Sans `RESEND_API_KEY`, les emails (vérification, reset, lien magique) sont affichés dans la console du serveur avec leur lien : tous les parcours sont testables sans compte Resend.
 
+## Cloudflare Turnstile
+
+Anti-robot sur inscription, connexion, lien magique, mot de passe oublié et renvoi de vérification. Désactivé tant que les clés sont vides.
+
+1. Créer un widget dans le dashboard Cloudflare (Turnstile) avec les domaines de l'application, mode « Managed ».
+2. Renseigner `NEXT_PUBLIC_TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET_KEY` (les deux, sinon l'app refuse de démarrer). En local, les clés de test de `.env.example` valident toujours.
+3. Derrière Cloudflare en proxy, ajouter `cf-connecting-ip` à `advanced.ipAddress.ipAddressHeaders` (`lib/auth/auth.ts`).
+
+Cloudflare figure dans les sous-traitants de `config/legal.ts` : l'en retirer si Turnstile n'est pas utilisé.
+
 ## Stripe
 
 1. Renseigner `STRIPE_SECRET_KEY` (clé restreinte `rk_` recommandée) et `STRIPE_PRICE_PRO_MONTHLY` (Price d'un Product en mode abonnement).

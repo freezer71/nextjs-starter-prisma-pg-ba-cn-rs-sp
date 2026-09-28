@@ -32,7 +32,7 @@ lib/db.ts           singleton Prisma (adapter pg) ; client généré dans lib/ge
 lib/auth/           auth.ts (serveur), client.ts (authClient), session.ts (getSession / requireSession)
 lib/email/send.ts   envoi Resend ; sans RESEND_API_KEY en dev, l'email est logué en console
 lib/stripe/         client, customer (getOrCreateStripeCustomer), store, webhook-handlers, actions
-lib/security/       csp.ts (CSP nonce), headers.ts (en-têtes HTTP)
+lib/security/       csp.ts (CSP nonce, domaines Stripe et Turnstile), headers.ts (en-têtes HTTP)
 lib/validations/    schémas zod des formulaires
 emails/             templates React Email (imports depuis `react-email`)
 components/ui       shadcn (Base UI) ; components/auth, components/app, components/billing, components/legal, site-footer.tsx
@@ -43,6 +43,7 @@ prisma/schema.prisma User/Session/Account/Verification/RateLimit (Better Auth) +
 ## Flux clés
 
 - **Auth** : formulaires client → `authClient` (rate limit + CSRF Better Auth). Email obligatoirement vérifié (`requireEmailVerification`), lien magique via plugin `magicLink`, reset avec révocation des sessions. La vraie protection est `requireSession()` dans les pages et server actions ; `proxy.ts` ne fait qu'une redirection optimiste.
+- **Turnstile** : plugin `captcha` de Better Auth, actif si `TURNSTILE_SECRET_KEY` + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (les deux ou aucune, sinon erreur au démarrage). Endpoints protégés : `authConfig.captchaEndpoints`. Côté client, `useTurnstile()` + `<TurnstileWidget />` (`components/auth/turnstile.tsx`) : passer `fetchOptions` à l'appel `authClient`, puis `reset()` (token à usage unique). Tout nouveau formulaire appelant un endpoint protégé doit faire de même.
 - **Stripe** : customer créé à l'inscription (hook `databaseHooks.user.create.after`, non bloquant) ou à la demande ; `stripeCustomerId` sur `User`. Checkout / portail via server actions (`lib/stripe/actions.ts`). Webhook : corps brut → `constructEventAsync` → insertion `StripeWebhookEvent` (idempotence) → `handleStripeEvent`. Un abonnement par utilisateur.
 - **Emails** : `sendEmail({ to, subject, react })` ; templates dans `emails/` avec layout commun.
 - **Pages légales** : textes génériques en français rendus depuis `config/legal.ts` (placeholders `[…]` à remplir, dates `lastUpdated` à tenir à jour). Seuls des traceurs exemptés de consentement sont utilisés : ajouter un bandeau cookies si des outils d'analytics ou publicitaires sont introduits. Classe `prose` (`@tailwindcss/typography`) alignée sur les tokens du thème pour toute page de contenu.
@@ -59,7 +60,7 @@ prisma/schema.prisma User/Session/Account/Verification/RateLimit (Better Auth) +
 
 ## Sécurité en place
 
-CSP stricte avec nonce (`lib/security/csp.ts`, `proxy.ts`), en-têtes HTTP (`lib/security/headers.ts`), rate limiting Better Auth en base avec règles renforcées, `trustedOrigins` depuis l'env, cookies sécurisés, mots de passe ≥ 12 caractères + rejet des mots de passe compromis (plugin `haveIBeenPwned`), tokens magic link hachés, réponses génériques anti-énumération, validation zod client/serveur/env, signature + idempotence des webhooks, `requireSession()` dans chaque action, chemins de redirection internes seulement (`lib/safe-redirect.ts`), hook git `.githooks/pre-commit` bloquant les secrets et fichiers `.env`.
+CSP stricte avec nonce (`lib/security/csp.ts`, `proxy.ts`), en-têtes HTTP (`lib/security/headers.ts`), rate limiting Better Auth en base avec règles renforcées, Cloudflare Turnstile sur les formulaires d'auth (optionnel), `trustedOrigins` depuis l'env, cookies sécurisés, mots de passe ≥ 12 caractères + rejet des mots de passe compromis (plugin `haveIBeenPwned`), tokens magic link hachés, réponses génériques anti-énumération, validation zod client/serveur/env, signature + idempotence des webhooks, `requireSession()` dans chaque action, chemins de redirection internes seulement (`lib/safe-redirect.ts`), hook git `.githooks/pre-commit` bloquant les secrets et fichiers `.env`.
 
 ## Skills installés (`.claude/skills/`)
 

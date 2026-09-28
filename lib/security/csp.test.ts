@@ -32,6 +32,12 @@ describe("buildCsp", () => {
     expect(csp).toMatch(/frame-src [^;]*https:\/\/checkout\.stripe\.com/);
     expect(csp).toMatch(/connect-src [^;]*https:\/\/api\.stripe\.com/);
   });
+
+  it("autorise le script et l'iframe de Cloudflare Turnstile", () => {
+    const csp = buildCsp({ nonce: "n" });
+    expect(csp).toMatch(/script-src [^;]*https:\/\/challenges\.cloudflare\.com/);
+    expect(csp).toMatch(/frame-src [^;]*https:\/\/challenges\.cloudflare\.com/);
+  });
 });
 
 describe("generateNonce", () => {

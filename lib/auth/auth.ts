@@ -2,6 +2,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { captcha } from "better-auth/plugins";
 import { haveIBeenPwned } from "better-auth/plugins/haveibeenpwned";
 import { magicLink } from "better-auth/plugins/magic-link";
 
@@ -19,6 +20,12 @@ const trustedOrigins = [
   env.NEXT_PUBLIC_APP_URL,
   ...(env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? []),
 ];
+
+// Une seule des deux clés Turnstile = captcha à moitié configuré : on refuse de démarrer
+// plutôt que de bloquer toutes les connexions (clé secrète seule) ou de ne rien vérifier (clé de site seule).
+if (Boolean(env.TURNSTILE_SECRET_KEY) !== Boolean(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)) {
+  throw new Error("TURNSTILE_SECRET_KEY et NEXT_PUBLIC_TURNSTILE_SITE_KEY doivent être renseignées ensemble.");
+}
 
 /**
  * Configuration serveur de Better Auth.
@@ -118,6 +125,17 @@ export const auth = betterAuth({
     haveIBeenPwned({
       customPasswordCompromisedMessage: "Ce mot de passe apparaît dans une fuite de données connue. Choisissez-en un autre.",
     }),
+    // Cloudflare Turnstile sur les endpoints qui créent un compte, testent un mot de passe ou envoient un email.
+    // Le token est lu dans l'en-tête `x-captcha-response` (voir components/auth/turnstile.tsx).
+    ...(env.TURNSTILE_SECRET_KEY
+      ? [
+          captcha({
+            provider: "cloudflare-turnstile",
+            secretKey: env.TURNSTILE_SECRET_KEY,
+            endpoints: [...authConfig.captchaEndpoints],
+          }),
+        ]
+      : []),
     magicLink({
       expiresIn: authConfig.magicLinkExpiresIn,
       // Le token est stocké haché : une fuite de la base ne permet pas de se connecter.

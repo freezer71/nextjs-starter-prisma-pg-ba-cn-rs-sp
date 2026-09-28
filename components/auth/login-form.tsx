@@ -7,7 +7,8 @@ import { useState } from "react";
 
 import { FormMessage } from "@/components/auth/form-message";
 import { SubmitButton } from "@/components/auth/submit-button";
-import { translateAuthError, useAuthForm } from "@/components/auth/use-auth-form";
+import { TurnstileWidget, useTurnstile } from "@/components/auth/turnstile";
+import { CAPTCHA_PENDING_MESSAGE, translateAuthError, useAuthForm } from "@/components/auth/use-auth-form";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authConfig } from "@/config/auth";
@@ -23,13 +24,20 @@ export function LoginForm({ next }: LoginFormProps) {
   const router = useRouter();
   const { errors, formError, setFormError, pending, handleSubmit } = useAuthForm(loginSchema);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const turnstile = useTurnstile();
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setUnverifiedEmail(null);
-    const { error } = await authClient.signIn.email({ email, password, rememberMe: true });
+    if (!turnstile.ready) {
+      setFormError(CAPTCHA_PENDING_MESSAGE);
+      return;
+    }
+    const { error } = await authClient.signIn.email({ email, password, rememberMe: true, fetchOptions: turnstile.fetchOptions });
+    turnstile.reset();
     if (error) {
-      // 403 : email non vérifié (Better Auth renvoie automatiquement un email de vérification).
-      if (error.status === 403) {
+      // Email non vérifié (Better Auth renvoie automatiquement un email de vérification).
+      // Tester le code et non le statut : un échec du captcha est aussi un 403.
+      if (error.code === "EMAIL_NOT_VERIFIED") {
         setUnverifiedEmail(email);
         return;
       }
@@ -71,6 +79,7 @@ export function LoginForm({ next }: LoginFormProps) {
           <FieldError>{errors.password}</FieldError>
         </Field>
       </FieldGroup>
+      <TurnstileWidget {...turnstile.widgetProps} />
       <SubmitButton pending={pending}>Se connecter</SubmitButton>
     </form>
   );

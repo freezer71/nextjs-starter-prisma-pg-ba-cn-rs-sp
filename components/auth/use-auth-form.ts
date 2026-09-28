@@ -41,6 +41,14 @@ export function useAuthForm<TSchema extends z.ZodType>(schema: TSchema) {
   return { errors, formError, setFormError, pending, handleSubmit };
 }
 
+export const CAPTCHA_ERROR_MESSAGE = "La vérification anti-robot a échoué. Réessayez.";
+export const CAPTCHA_PENDING_MESSAGE = "Vérification anti-robot en cours, patientez un instant.";
+
+/** Erreur renvoyée par le plugin captcha (Turnstile) de Better Auth. */
+export function isCaptchaError(code: string | undefined): boolean {
+  return code === "VERIFICATION_FAILED" || code === "MISSING_RESPONSE";
+}
+
 /** Message d'erreur générique retourné par Better Auth, traduit pour l'utilisateur. */
 export function translateAuthError(code: string | undefined, fallback: string): string {
   switch (code) {
@@ -57,6 +65,9 @@ export function translateAuthError(code: string | undefined, fallback: string): 
       return "Le mot de passe est trop long.";
     case "PASSWORD_COMPROMISED":
       return "Ce mot de passe apparaît dans une fuite de données connue. Choisissez-en un autre.";
+    case "VERIFICATION_FAILED":
+    case "MISSING_RESPONSE":
+      return CAPTCHA_ERROR_MESSAGE;
     case "INVALID_TOKEN":
     case "TOKEN_EXPIRED":
       return "Ce lien est invalide ou a expiré.";

@@ -26,7 +26,7 @@ export const legalConfig = {
   /** Dates de dernière mise à jour affichées en tête de chaque page (format ISO). */
   lastUpdated: {
     legal: "2026-09-07",
-    privacy: "2026-09-07",
+    privacy: "2026-09-28",
     terms: "2026-09-07",
   },
 
@@ -97,6 +97,14 @@ export const legalConfig = {
       location: "États-Unis",
       safeguard: "Clauses contractuelles types de la Commission européenne",
       url: "https://resend.com/legal/privacy-policy",
+    },
+    // À retirer si Cloudflare Turnstile n'est pas activé (NEXT_PUBLIC_TURNSTILE_SITE_KEY vide).
+    {
+      name: "Cloudflare",
+      purpose: "Protection anti-robot des formulaires d'inscription et de connexion (Turnstile)",
+      location: "Union européenne et États-Unis",
+      safeguard: "Data Privacy Framework UE–États-Unis et clauses contractuelles types",
+      url: "https://www.cloudflare.com/fr-fr/privacypolicy/",
     },
   ] satisfies Subprocessor[],
 

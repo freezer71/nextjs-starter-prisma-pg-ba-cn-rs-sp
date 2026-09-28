@@ -4,7 +4,8 @@ import { useState } from "react";
 
 import { FormMessage } from "@/components/auth/form-message";
 import { SubmitButton } from "@/components/auth/submit-button";
-import { useAuthForm } from "@/components/auth/use-auth-form";
+import { TurnstileWidget, useTurnstile } from "@/components/auth/turnstile";
+import { CAPTCHA_ERROR_MESSAGE, CAPTCHA_PENDING_MESSAGE, isCaptchaError, useAuthForm } from "@/components/auth/use-auth-form";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authConfig } from "@/config/auth";
@@ -14,15 +15,26 @@ import { emailOnlySchema } from "@/lib/validations/auth";
 export function MagicLinkForm() {
   const { errors, formError, setFormError, pending, handleSubmit } = useAuthForm(emailOnlySchema);
   const [sent, setSent] = useState(false);
+  const turnstile = useTurnstile();
 
   const onSubmit = handleSubmit(async ({ email }) => {
+    if (!turnstile.ready) {
+      setFormError(CAPTCHA_PENDING_MESSAGE);
+      return;
+    }
     const { error } = await authClient.signIn.magicLink({
       email,
       callbackURL: authConfig.routes.afterLogin,
       newUserCallbackURL: authConfig.routes.afterLogin,
       // Better Auth ajoute `?error=` à cette URL si le lien est invalide ou expiré.
       errorCallbackURL: authConfig.routes.magicLink,
+      fetchOptions: turnstile.fetchOptions,
     });
+    turnstile.reset();
+    if (isCaptchaError(error?.code)) {
+      setFormError(CAPTCHA_ERROR_MESSAGE);
+      return;
+    }
     if (error?.status === 429) {
       setFormError("Trop de tentatives. Patientez une minute avant de réessayer.");
       return;
@@ -51,6 +63,7 @@ export function MagicLinkForm() {
           <FieldError>{errors.email}</FieldError>
         </Field>
       </FieldGroup>
+      <TurnstileWidget {...turnstile.widgetProps} />
       <SubmitButton pending={pending}>Recevoir un lien de connexion</SubmitButton>
     </form>
   );
