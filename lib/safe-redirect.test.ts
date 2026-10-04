@@ -13,4 +13,12 @@ describe("safeInternalPath", () => {
     expect(safeInternalPath("/\\evil.example", "/x")).toBe("/x");
     expect(safeInternalPath(undefined)).toBeUndefined();
   });
+
+  it("refuse les caractères que le navigateur supprime avant d'analyser l'URL", () => {
+    // `new URL("/\t/evil.example", origine)` pointe vers https://evil.example/.
+    expect(safeInternalPath("/\t/evil.example", "/x")).toBe("/x");
+    expect(safeInternalPath("/\n/evil.example", "/x")).toBe("/x");
+    expect(safeInternalPath("/\r/evil.example", "/x")).toBe("/x");
+    expect(safeInternalPath("/a\\..\\/evil.example", "/x")).toBe("/x");
+  });
 });

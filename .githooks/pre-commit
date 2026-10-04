@@ -1,5 +1,5 @@
 #!/bin/sh
-# Bloque le commit si des secrets Stripe / Resend ou un fichier .env sont indexés.
+# Bloque le commit si des secrets Stripe / Resend / Turnstile ou un fichier .env sont indexés.
 # Activé par `npm run prepare` (git config core.hooksPath .githooks).
 
 staged_env=$(git diff --cached --name-only | grep -E '(^|/)\.env(\..*)?$' | grep -v '\.env\.example$')
@@ -9,7 +9,8 @@ if [ -n "$staged_env" ]; then
   exit 1
 fi
 
-pattern='(^|[^A-Za-z0-9_])((sk|rk)_(live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}|re_[A-Za-z0-9]{20,})'
+# Clés Resend : re_<8 car.>_<24 car.> ; secrets Turnstile : 0x4...
+pattern='(^|[^A-Za-z0-9_])((sk|rk)_(live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}|re_[A-Za-z0-9]{8}_[A-Za-z0-9]{20,}|0x4[A-Za-z0-9_-]{30,})'
 matches=$(git diff --cached -U0 | grep -E '^\+' | grep -vE '^\+\+\+' | grep -E "$pattern")
 if [ -n "$matches" ]; then
   echo "✗ Secret potentiel détecté dans les modifications indexées :"

@@ -40,12 +40,7 @@ export async function handleStripeEvent(event: Stripe.Event, deps: WebhookDeps):
       const subscriptionId = stripeId(session.subscription);
       if (!subscriptionId) return;
       const subscription = await deps.retrieveSubscription(subscriptionId);
-      const userId = await resolveUserId(subscription, deps, session.client_reference_id);
-      if (!userId) {
-        logger.warn("[stripe] checkout sans utilisateur associé", { sessionId: session.id, subscriptionId });
-        return;
-      }
-      await deps.store.upsertSubscription(mapStripeSubscription(subscription, userId));
+      await syncSubscription(subscription, deps, logger, session.client_reference_id);
       return;
     }
 
@@ -56,13 +51,10 @@ export async function handleStripeEvent(event: Stripe.Event, deps: WebhookDeps):
 
     case "customer.subscription.created":
     case "customer.subscription.updated": {
-      const subscription = event.data.object;
-      const userId = await resolveUserId(subscription, deps);
-      if (!userId) {
-        logger.warn("[stripe] abonnement sans utilisateur associé", { subscriptionId: subscription.id });
-        return;
-      }
-      await deps.store.upsertSubscription(mapStripeSubscription(subscription, userId));
+      // Stripe ne garantit pas l'ordre de livraison : l'objet de l'événement peut être périmé
+      // (ex. `updated` actif reçu après `deleted`). On relit l'état courant chez Stripe.
+      const subscription = await deps.retrieveSubscription(event.data.object.id);
+      await syncSubscription(subscription, deps, logger);
       return;
     }
 
@@ -92,6 +84,28 @@ export async function handleStripeEvent(event: Stripe.Event, deps: WebhookDeps):
       // Événement non géré : accusé de réception sans traitement.
       return;
   }
+}
+
+/** Statuts définitifs : l'abonnement ne peut plus redevenir actif. */
+const TERMINAL_STATUSES = new Set<Stripe.Subscription.Status>(["canceled", "incomplete_expired"]);
+
+/** Reporte en base l'état courant d'un abonnement (lu chez Stripe). */
+async function syncSubscription(
+  subscription: Stripe.Subscription,
+  deps: WebhookDeps,
+  logger: NonNullable<WebhookDeps["logger"]>,
+  clientReferenceId?: string | null,
+): Promise<void> {
+  if (TERMINAL_STATUSES.has(subscription.status)) {
+    await deps.store.deleteSubscription(subscription.id);
+    return;
+  }
+  const userId = await resolveUserId(subscription, deps, clientReferenceId);
+  if (!userId) {
+    logger.warn("[stripe] abonnement sans utilisateur associé", { subscriptionId: subscription.id });
+    return;
+  }
+  await deps.store.upsertSubscription(mapStripeSubscription(subscription, userId));
 }
 
 /**

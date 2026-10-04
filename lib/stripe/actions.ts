@@ -4,8 +4,9 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { getPlan } from "@/config/billing";
+import { ACTIVE_SUBSCRIPTION_STATUSES, getPlan } from "@/config/billing";
 import { requireSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getStripe } from "@/lib/stripe/client";
 import { getOrCreateStripeCustomer } from "@/lib/stripe/customer";
@@ -29,6 +30,13 @@ export async function createCheckoutSession(formData: FormData) {
   const plan = parsed.success ? getPlan(parsed.data.planId) : undefined;
   if (!plan?.priceId) {
     throw new Error("Plan inconnu ou non configuré.");
+  }
+
+  // Un seul abonnement par utilisateur : la server action peut être rejouée hors de l'interface,
+  // un abonné actif est renvoyé vers le portail au lieu d'être facturé une seconde fois.
+  const current = await db.subscription.findUnique({ where: { userId: session.user.id }, select: { status: true } });
+  if (current && ACTIVE_SUBSCRIPTION_STATUSES.has(current.status)) {
+    return createBillingPortalSession();
   }
 
   const stripe = getStripe();

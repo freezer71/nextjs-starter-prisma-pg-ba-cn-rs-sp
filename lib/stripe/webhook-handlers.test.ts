@@ -44,25 +44,40 @@ function deps(store: SubscriptionStore, retrieve?: WebhookDeps["retrieveSubscrip
 describe("handleStripeEvent", () => {
   it("customer.subscription.created : enregistre l'abonnement avec l'utilisateur des métadonnées", async () => {
     const { store, subscriptions } = fakeStore();
-    await handleStripeEvent(
-      fakeEvent("customer.subscription.created", fakeSubscription({ metadata: { userId: "user_meta" } })),
-      deps(store),
-    );
+    const current = fakeSubscription({ metadata: { userId: "user_meta" } });
+    await handleStripeEvent(fakeEvent("customer.subscription.created", current), deps(store, async () => current));
     expect(subscriptions.get("sub_123")?.userId).toBe("user_meta");
   });
 
   it("customer.subscription.updated : retrouve l'utilisateur via le customer si les métadonnées sont absentes", async () => {
     const { store, subscriptions } = fakeStore();
-    await handleStripeEvent(fakeEvent("customer.subscription.updated", fakeSubscription({ status: "past_due" })), deps(store));
+    const current = fakeSubscription({ status: "past_due" });
+    await handleStripeEvent(fakeEvent("customer.subscription.updated", current), deps(store, async () => current));
     expect(subscriptions.get("sub_123")).toMatchObject({ userId: "user_from_customer", status: "past_due" });
+  });
+
+  it("customer.subscription.updated : enregistre l'état lu chez Stripe, pas celui de l'événement", async () => {
+    const { store, subscriptions } = fakeStore();
+    const retrieve = vi.fn(async (id: string) => fakeSubscription({ id, status: "past_due" }));
+    await handleStripeEvent(fakeEvent("customer.subscription.updated", fakeSubscription({ status: "active" })), deps(store, retrieve));
+    expect(retrieve).toHaveBeenCalledWith("sub_123");
+    expect(subscriptions.get("sub_123")?.status).toBe("past_due");
+  });
+
+  it("événement en retard sur un abonnement résilié : ne réactive pas l'accès", async () => {
+    const { store, subscriptions } = fakeStore();
+    // `updated` (actif) livré après `deleted` : Stripe indique que l'abonnement est résilié.
+    await handleStripeEvent(
+      fakeEvent("customer.subscription.updated", fakeSubscription({ status: "active" })),
+      deps(store, async (id) => fakeSubscription({ id, status: "canceled" })),
+    );
+    expect(subscriptions.has("sub_123")).toBe(false);
   });
 
   it("ignore un abonnement dont l'utilisateur est introuvable", async () => {
     const { store, subscriptions } = fakeStore();
-    await handleStripeEvent(
-      fakeEvent("customer.subscription.created", fakeSubscription({ customer: "cus_inconnu" })),
-      deps(store),
-    );
+    const current = fakeSubscription({ customer: "cus_inconnu" });
+    await handleStripeEvent(fakeEvent("customer.subscription.created", current), deps(store, async () => current));
     expect(subscriptions.size).toBe(0);
     expect(silentLogger.warn).toHaveBeenCalled();
   });
